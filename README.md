@@ -1,66 +1,53 @@
-## Foundry
+# 🧪 SimpleDEX - Proyecto Final Módulo 3
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Este es el proyecto final del Módulo 3 del curso de Solidity. Desarrollamos un **AMM DEX (Intercambiador Descentralizado)** tipo Uniswap muy simple usando Foundry, que permite:
 
-Foundry consists of:
+- Crear dos tokens ERC20 (`TokenA`, `TokenB`)
+- Desplegar un contrato `SimpleDEX`
+- Agregar liquidez
+- Hacer swaps entre TokenA y TokenB
+- Consultar precios
+- Retirar liquidez
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+---
 
-## Documentation
+## 🛠 Herramientas utilizadas
 
-https://book.getfoundry.sh/
+- ⚙️ Foundry (forge, cast, script)
+- Solidity ^0.8.20
+- Scroll Sepolia testnet
+- RPC público: `https://rpc.scroll.io`
+- Alchemy/Infura para RPC privado (si se desea)
 
-## Usage
+---
 
-### Build
+## 📦 Estructura
 
-```shell
-$ forge build
-```
+simple-dex/
+│
+├── src/
+│ ├── TokenA.sol
+│ ├── TokenB.sol
+│ └── SimpleDEX.sol
+│
+├── script/
+│ ├── Deploy.s.sol # Despliega TokenA, TokenB, SimpleDEX
+│ ├── AddLiquidity.s.sol # Agrega liquidez
+│ ├── SwapTokens.s.sol # Hace un swap TokenA -> TokenB
+│ ├── RemoveLiquidity.s.sol # Retira liquidez
+│ ├── GetPrice.s.sol # Consulta precios
+│ └── CheckBalance.s.sol # Verifica balances
+│
+├── .env # Claves privadas y URL RPC (ignorado)
+├── foundry.toml
+├── .gitignore
+└── README.md
 
-### Test
 
-```shell
-$ forge test
-```
+## Autor
+Nombre: IntiDev1
 
-### Format
+Curso: Solidity - Módulo 3
 
-```shell
-$ forge fmt
-```
+Wallet: 0xA43172d819542155D16F7059563951381BFD70Dc
 
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```

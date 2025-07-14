@@ -2,10 +2,13 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol"; // (opcional)
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol"; // Usamos funciones seguras
 
 /// @title SimpleDEX - Un exchange descentralizado básico con pool de liquidez
 contract SimpleDEX {
+    using SafeERC20 for IERC20; // Activamos funciones seguras para transferencias
+
     IERC20 public tokenA;
     IERC20 public tokenB;
     address public owner;
@@ -22,16 +25,17 @@ contract SimpleDEX {
         _;
     }
 
+    /// @notice Constructor recibe las direcciones de los tokens
     constructor(address _tokenA, address _tokenB) {
         tokenA = IERC20(_tokenA);
         tokenB = IERC20(_tokenB);
         owner = msg.sender;
     }
 
-    /// @notice Agrega liquidez al pool
+    /// @notice Agrega liquidez al pool (solo el owner)
     function addLiquidity(uint256 amountA, uint256 amountB) external onlyOwner {
-        require(tokenA.transferFrom(msg.sender, address(this), amountA), "Transfer failed A");
-        require(tokenB.transferFrom(msg.sender, address(this), amountB), "Transfer failed B");
+        tokenA.safeTransferFrom(msg.sender, address(this), amountA);
+        tokenB.safeTransferFrom(msg.sender, address(this), amountB);
 
         reserveA += amountA;
         reserveB += amountB;
@@ -41,10 +45,13 @@ contract SimpleDEX {
 
     /// @notice Intercambia TokenA por TokenB
     function swapAforB(uint256 amountAIn) external {
-        require(tokenA.transferFrom(msg.sender, address(this), amountAIn), "Transfer failed A");
+        tokenA.safeTransferFrom(msg.sender, address(this), amountAIn);
 
         uint256 amountBOut = getAmountOut(amountAIn, reserveA, reserveB);
-        require(tokenB.transfer(msg.sender, amountBOut), "Transfer failed B");
+
+        require(reserveB >= amountBOut, "Not enough TokenB liquidity");
+
+        tokenB.safeTransfer(msg.sender, amountBOut);
 
         reserveA += amountAIn;
         reserveB -= amountBOut;
@@ -54,10 +61,13 @@ contract SimpleDEX {
 
     /// @notice Intercambia TokenB por TokenA
     function swapBforA(uint256 amountBIn) external {
-        require(tokenB.transferFrom(msg.sender, address(this), amountBIn), "Transfer failed B");
+        tokenB.safeTransferFrom(msg.sender, address(this), amountBIn);
 
         uint256 amountAOut = getAmountOut(amountBIn, reserveB, reserveA);
-        require(tokenA.transfer(msg.sender, amountAOut), "Transfer failed A");
+
+        require(reserveA >= amountAOut, "Not enough TokenA liquidity");
+
+        tokenA.safeTransfer(msg.sender, amountAOut);
 
         reserveB += amountBIn;
         reserveA -= amountAOut;
@@ -65,15 +75,15 @@ contract SimpleDEX {
         emit Swapped(msg.sender, address(tokenB), amountBIn, address(tokenA), amountAOut);
     }
 
-    /// @notice Retira liquidez (solo owner)
+    /// @notice Retira liquidez (solo el owner)
     function removeLiquidity(uint256 amountA, uint256 amountB) external onlyOwner {
         require(reserveA >= amountA && reserveB >= amountB, "Not enough reserves");
 
         reserveA -= amountA;
         reserveB -= amountB;
 
-        require(tokenA.transfer(msg.sender, amountA), "Transfer failed A");
-        require(tokenB.transfer(msg.sender, amountB), "Transfer failed B");
+        tokenA.safeTransfer(msg.sender, amountA);
+        tokenB.safeTransfer(msg.sender, amountB);
 
         emit LiquidityRemoved(amountA, amountB);
     }
@@ -81,19 +91,21 @@ contract SimpleDEX {
     /// @notice Retorna el precio actual de 1 unidad del token opuesto
     function getPrice(address _token) external view returns (uint256) {
         if (_token == address(tokenA)) {
+            require(reserveA > 0, "No TokenA liquidity");
             return (reserveB * 1e18) / reserveA;
         } else if (_token == address(tokenB)) {
+            require(reserveB > 0, "No TokenB liquidity");
             return (reserveA * 1e18) / reserveB;
         } else {
             revert("Token not supported");
         }
     }
 
-    /// @notice Calcula el output usando la fórmula del producto constante: (x+dx)(y-dy) = xy
+    /// @notice Fórmula de producto constante para calcular el output de un swap
     function getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut) internal pure returns (uint256) {
         require(reserveIn > 0 && reserveOut > 0, "Invalid reserves");
 
-        uint256 amountInWithFee = amountIn * 997; // 0.3% fee
+        uint256 amountInWithFee = amountIn * 997; // 0.3% de fee (Uniswap-style)
         uint256 numerator = amountInWithFee * reserveOut;
         uint256 denominator = (reserveIn * 1000) + amountInWithFee;
 
